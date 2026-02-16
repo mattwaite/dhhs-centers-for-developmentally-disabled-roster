@@ -1,0 +1,41 @@
+name: Monthly CDD Roster Update
+
+on:
+  schedule:
+    - cron: '0 12 16 * *'  # 16th of each month at noon UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-roster:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download and parse roster
+        run: python parse_roster.py
+
+      - name: Run tests
+        run: pytest test_parse_roster.py -v
+
+      - name: Commit and push new files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pdfs/ csvs/
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            DATE=$(date +%Y-%m-%d)
+            git commit -m "Add CDD roster data for ${DATE}"
+            git push
+          fi
